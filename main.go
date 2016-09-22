@@ -40,8 +40,7 @@ func main() {
                 return
         }
         parseResponse(resp, svc)
-
-        fmt.Printf("%s\n", "Accept VPC Peering Requests Done")
+        fmt.Printf("%s\n", "No VPC Peering Pending Request")
 }
 
 func parseResponse(resp *ec2.DescribeVpcPeeringConnectionsOutput, svc *ec2.EC2) {
@@ -51,7 +50,6 @@ func parseResponse(resp *ec2.DescribeVpcPeeringConnectionsOutput, svc *ec2.EC2) 
                         err := acceptPeeringRequest(v, svc)
                         if err != nil {
                                 fmt.Println(err.Error())
-                                return
                         }
                 }
         }

@@ -5,46 +5,66 @@ import (
         "github.com/aws/aws-sdk-go/service/ec2"
         "github.com/aws/aws-sdk-go/aws/session"
         "github.com/aws/aws-sdk-go/aws"
+        "github.com/urfave/cli"
         "os"
-        "strings"
-
 )
 
-var OWNER       = os.Getenv("OWNER")
-var ACCOUNT_IDS = strings.Split(os.Getenv("ACCOUNT_IDS"), ",")
-var AWS_REGION  = os.Getenv("AWS_DEFAULT_REGION")
+var OWNER string
+var AWS_REGION string
+var ACCOUNT_IDS cli.StringSlice
 
 func main() {
-        if len(OWNER) == 0 {
-                fmt.Println("Please specify owner account ID to accept peering connection")
-                return
+
+        app := cli.NewApp()
+        app.Name = "vpc-peering-connection"
+        app.Version = "0.0.1"
+        cli.VersionPrinter = func(c *cli.Context) {
+                fmt.Fprintf(c.App.Writer, "version=%s\n", c.App.Version)
+        }
+        app.Flags = []cli.Flag {
+                cli.StringFlag{
+                Name  : "owner-id, o",
+                Usage : "owner-id that accept VPC Peering Request connection",
+                EnvVar: "aws_account_id",
+                Destination: &OWNER,
+                },
+                cli.StringSliceFlag{
+                Name  : "list-aws-account-ids, l",
+                Usage : "List of AWS account IDs to accept VPC Peering Request connection from",
+                Value : &ACCOUNT_IDS,
+                },
+                cli.StringFlag{
+                Name  : "DEFAULT AWS REGIONS, r",
+                Usage : "Default AWS Region",
+                EnvVar: "DEFAULT_AWS_REGION",
+                Destination: &AWS_REGION,
+                },
         }
 
-        if len(ACCOUNT_IDS) <= 0 {
-                fmt.Println("Please specify ACCOUNT IDs you own")
-                return
-        }
+        app.Action = func(c *cli.Context) error {
+                if len(os.Args) < 2 {
+                        cli.ShowAppHelp(c)
+                        os.Exit(1)
+                        return nil
+                }
+                fmt.Printf("%s\n", "Making VPC Peering Requests")
 
-        if len(AWS_REGION) <= 0 {
-                fmt.Printf("%s", "Please specify DEFAULT_AWS_REGION")
-                return
-        }
-        fmt.Printf("%s\n", "Making VPC Peering Requests")
+                svc := ec2.New(session.New(), &aws.Config{ Region: aws.String(AWS_REGION) })
 
-        svc := ec2.New(session.New(), &aws.Config{ Region: aws.String(AWS_REGION) })
-
-        params := &ec2.DescribeVpcPeeringConnectionsInput{}
-        resp, err := svc.DescribeVpcPeeringConnections(params)
-        if err != nil {
-                fmt.Println(err.Error())
-                return
+                params := &ec2.DescribeVpcPeeringConnectionsInput{}
+                resp, err := svc.DescribeVpcPeeringConnections(params)
+                if err != nil {
+                        fmt.Println(err.Error())
+                        return err
+                }
+                parseResponse(resp, svc)
+                fmt.Printf("%s\n", "No VPC Peering Pending Request")
+                return nil
         }
-        parseResponse(resp, svc)
-        fmt.Printf("%s\n", "No VPC Peering Pending Request")
+        app.Run(os.Args)
 }
 
 func parseResponse(resp *ec2.DescribeVpcPeeringConnectionsOutput, svc *ec2.EC2) {
-
         for _, v := range resp.VpcPeeringConnections {
                 if isValidAccount(v.RequesterVpcInfo.OwnerId) == true && isOwner(v.AccepterVpcInfo.OwnerId) == true {
                         err := acceptPeeringRequest(v, svc)

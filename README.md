@@ -11,28 +11,24 @@ Please export AWS token and default region for this to work.
 Either specify OWNER ID and/or ACCOUNT_IDS as environment
 variables or through .env file
 
-With .env file:
-
 ```
-$ dotenv go run main.go
-```
-
-Without .env file:
-
-```
-$ go run main.go
+$ go run main.go --help
 ```
 
 Compile:
 
 ```
-$ go build -o <packagename> ./...
-$ gem install dotenv
-$ dotenv <packagename>
+$ make ARCH=darwin
+```
+
+Execute binary:
+
+```
+$ <packagename> -o ACCOUNT_ID -l ACCOUNT_01 -l ACCOUNT_02 -l ACCOUNT_03 -r ap-southeast-2
 ```
 
 Cross compile for Linux:
 
 ```
-$ env GOOS=linux GOARCH=amd64 go build -o <packagename> ./...
+$ make ARCH=linux
 ```
